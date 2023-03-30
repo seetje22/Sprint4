@@ -9,21 +9,38 @@
         public $email;
         private $password;
         
-        public function ShowUser() {
-            echo "<br>Username: $this->username<br>";
-            echo "<br>Password: $this->password<br>";
-            echo "<br>Email: $this->email<br>";
-        }
-
-        public function RegisterUser(){
-            
-        }
-
         function SetPassword($password){
             $this->password = $password;
         }
         function GetPassword(){
             return $this->password;
+        }
+
+        public function ShowUser() {
+            echo "<br>Username: j<br>";
+            echo "<br>Password: $this->password<br>";
+            echo "<br>Email: $this->email<br>";
+        }
+
+        public function RegisterUser(){
+            $status = false;
+            $errors=[];
+            if($this->username != "" || $this->password != ""){
+
+                // Check user exist
+                if(true){
+                    array_push($errors, "Username bestaat al.");
+                } else {
+                    // username opslaan in tabel login
+                    // INSERT INTO `user` (`username`, `password`, `role`) VALUES ('kjhasdasdkjhsak', 'asdasdasdasdas', '');
+                    // Manier 1
+                    
+                    $status = true;
+                }
+                            
+                
+            }
+            return $errors;
         }
 
         function ValidateUser(){
@@ -34,48 +51,88 @@
             } else if (empty($this->password)){
                 array_push($errors, "Invalid password");
             }
+
+            // Test username > 3 tekens
+
+            if(strlen($this->username) < 3){
+                array_push($errors, "username te kort");
+            }
             
             return $errors;
         }
+
         public function LoginUser(){
-            $errors = [];
-        
-            // Maak verbinding met de database
-            $conn = new mysqli("localhost", "username", "password", "database");
-        
-            // Controleer of de verbinding is gelukt
-            if ($conn->connect_error) {
-                array_push($errors, "Kan geen verbinding maken met de database: " . $conn->connect_error);
-                return false;
+
+            // Connect database
+            try {
+                $pdo = new PDO("mysql:host=localhost;dbname=user5", 'root', '');
+                // Set PDOException
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                echo 'Connected Succesfully';
+            } catch(PDOException $e) {
+                echo "Connection failed: " . $e->getMessage();
             }
-        
-            // Zoek de gebruiker op basis van de gebruikersnaam en het wachtwoord
-            $sql = "SELECT * FROM users WHERE username='" . $conn->real_escape_string($this->username) . "' AND password='" . $conn->real_escape_string($this->password) . "'";
-            $result = $conn->query($sql);
-        
-            // Controleer of er een rij is gevonden
-            if ($result->num_rows == 1) {
-                // Haal de gebruikersgegevens op
-                $row = $result->fetch_assoc();
-        
-                // Sla de gebruikersgegevens op in de sessie
+
+            // Zoek user in de table user
+
+            $query = "SELECT * FROM user WHERE username = :username AND password = :password";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute(
+                array(
+                    "username"=> $this->username,
+                    "password" => $this->password
+                )
+            );
+
+            $count = $stmt->rowCount();
+
+            // Indien gevonden dan sessie vullen
+
+            if($count > 0) {
                 session_start();
-                $_SESSION["user_id"] = $row["id"];
-                $_SESSION["user_name"] = $row["username"];
-                $_SESSION["user_email"] = $row["email"];
-        
-                // Sluit de databaseverbinding en geef aan dat het inloggen is gelukt
-                $conn->close();
+
+                $_SESSION["username"] = $this->username;
+
                 return true;
             } else {
-                // Geef aan dat het inloggen is mislukt
-                array_push($errors, "Ongeldige gebruikersnaam of wachtwoord");
-                $conn->close();
+                echo 'Verkeerde input';
                 return false;
             }
+
         }
-        
 
-    
+        // Check if the user is already logged in
+        public function IsLoggedin() {
+            // Check if user session has been set
+            if(isset($_SESSION["username"])) {
+                return true;
+            } else {
+                return false;
+            }
+            
+        }
 
-?>
+        public function GetUser($username){
+
+		    // Doe SELECT * from user WHERE username = $username
+            if (false){
+                //Indien gevonden eigenschappen vullen met waarden uit de SELECT
+                $this->username = $_SESSION['username'];
+            } else {
+                return NULL;
+            }   
+        }
+
+        public function Logout(){
+            session_start();
+            // remove all session variables
+            unset($_SESSION['username']);
+
+            // destroy the session
+            session_destroy();
+
+            header('location: index.php');
+        }
+
+
+    }
